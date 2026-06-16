@@ -1,0 +1,15 @@
+{
+  "name": "PGPPP Emulator",
+  "version": "1.0.0",
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        { "path": "binaries/bootloader.bin", "offset": 4096 },
+        { "path": "binaries/partitions.bin", "offset": 32768 },
+        { "path": "binaries/boot_app0.bin", "offset": 57344 },
+        { "path": "binaries/firmware.bin", "offset": 65536 }
+      ]
+    }
+  ]
+}
