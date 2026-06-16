@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PGPPP: BLE Console</title>
+    <style>
+        :root { 
+            --neon-purple: #D08CF2; 
+            --neon-green: #39FF14; 
+            --neon-gold: #FFD700; 
+            --neon-red: #FF3131; 
+            --neon-blue: #00F3FF;
+            --neon-cyan: #07FFF0;
+        }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; }
+        .section { border: 1px solid #333; border-radius: 15px; padding: 15px; margin-bottom: 20px; background: #0a0a0a; }
+        h2 { color: var(--neon-purple); text-transform: uppercase; font-size: 0.8em; letter-spacing: 2px; margin-bottom: 15px; }
+        
+        button { background: #111; color: #fff; border: 2px solid var(--neon-purple); padding: 15px; width: 46%; 
+                 margin: 5px; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 13px; }
+        button:active { transform: scale(0.95); background: #222; }
+        
+        .btn-connect { border-color: var(--neon-blue); color: var(--neon-blue); }
+        .btn-stop { border-color: var(--neon-blue); color: var(--neon-blue); }
+        .btn-known { border-color: var(--neon-gold); color: var(--neon-gold); }
+        .btn-success { border-color: var(--neon-green); color: var(--neon-green); }
+        .btn-fail { border-color: var(--neon-red); color: var(--neon-red); }
+        
+        .btn-send { width: 95%; border-color: var(--neon-cyan); color: var(--neon-cyan); margin-top: 10px; }
+        .btn-dummy { width: 94%; border-color: #555; color: #aaa; margin-bottom: 15px; font-size: 11px; padding: 10px; }
+
+        #response-pulse { 
+            height: 10px; width: 100%; background: #222; margin: 10px 0; border-radius: 5px; 
+            transition: background 0.3s;
+        }
+        .pulse-active { background: var(--neon-cyan) !important; box-shadow: 0 0 15px var(--neon-cyan); }
+
+        .radio-group { display: flex; justify-content: space-around; padding: 10px; background: #111; border-radius: 10px; margin-top: 10px; }
+        .radio-item { font-size: 12px; color: var(--neon-purple); }
+        .radio-item input { margin-right: 5px; }
+
+        input[type="text"] { width: 88%; padding: 12px; border-radius: 8px; background: #111; color: #fff; border: 1px solid var(--neon-purple); font-family: monospace; font-size: 14px; margin-bottom: 8px;}
+        input[type="text"]:focus { outline: none; border-color: var(--neon-cyan); }
+input.textmsg { 
+    width: 46%; 
+    padding: 15px; 
+    border-radius: 10px; /* Matched to buttons */
+    background: #111; 
+    color: #fff; 
+    border: 2px solid var(--neon-purple); /* Matched to buttons */
+    font-family: monospace; 
+    font-size: 14px; 
+    margin: 5px; /* Matched to buttons */
+    box-sizing: border-box; /* Important so padding doesn't break the width */
+}
+
+/* This container handles the side-by-side layout */
+.input-row {
+    display: flex;
+    justify-content: center; /* Centers the row of two elements */
+    align-items: center;
+}
+
+        #log { background: #000; color: var(--neon-green); border: 1px solid #222; height: 120px; 
+               overflow-y: scroll; padding: 10px; font-family: monospace; font-size: 11px; text-align: left; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="disclaimer-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;">
+    <h2 style="color: var(--neon-purple);">DISCLAIMER & HOW-TO</h2>
+    <div style="background: #111; padding: 20px; border: 1px solid #333; border-radius: 10px; max-width: 500px; text-align: left; margin-bottom: 20px; font-size: 0.9em;">
+        <p>1. Ensure your device is charged powered on and nearby. Connect then click "RUN DEBUG MODE"</p
+        <p>2. Use "Device Provisioning" to sync MAC, KEY, and BLOB.</p>
+		<p>3. Use all other buttons to test devvice functionality</p>
+		<p>4. Keys are dumped from legal hardware; user assumes all liability.</p>
+        <p>5. Do not share your keys. This page does not store data.</p>
+    </div>
+    <label style="color: #fff; margin-bottom: 15px;">
+        <input type="checkbox" id="agree-check" onchange="checkAgreement()"> I understand and agree to the terms.
+    </label>
+    <button id="start-btn" onclick="hideDisclaimer()" disabled style="width: 200px; opacity: 0.5;">ENTER CONSOLE</button>
+</div>
+
+    <h1 style="color: var(--neon-purple); margin-bottom: 5px;">PGPPP: BLE Console</h1>
+
+    <button class="btn-connect" onclick="connect()">CONNECT TO DEVICE</button>
+	<button class="btn-connect" onclick="sendDebugBypass()">RUN DEBUG MODE</button>
+
+    <div class="section">
+        <h2>2. Device Provisioning</h2>
+        <button class="btn-dummy" onclick="fillDummyData()">FILL DUMMY TEST DATA</button>
+        <input type="text" id="prov-mac" placeholder="12-char MAC (No Colons)" autocomplete="off">
+        <input type="text" id="prov-key" placeholder="32-char KEY" autocomplete="off">
+        <input type="text" id="prov-blob" placeholder="512-char BLOB" autocomplete="off">
+        <button class="btn-stop"  onclick="syncKeys()">SYNC KEYS TO DEVICE</button>
+		<button class="btn-fail"  onclick="factoryReset()">FACTORY RESET DEVICE</button>
+    </div>
+
+<div class="section">
+        <h2>3. Game Triggers</h2>
+		        <h2>Device Feedback</h2>
+        <div id="response-pulse"></div>
+        <div id="bt-label" style="font-size: 12px; color: #666;">Disconnected</div>
+        <button class="btn-stop" style="width:48%"  onclick="sendEvent(204)">POKESTOP FOUND</button>
+		<button class="btn-new" style="width:48%"  onclick="sendEvent(114)">POKEMON FOUND</button>
+		<button class="btn-new" style="width:96%" onclick="sendEvent(0)">NEW POKEMON FOUND</button>
+		<button class="btn-success" style="width:48%"  onclick="sendEvent(135)">SPIN SUCCESS</button>
+		<button class="btn-success" style="width:48%"  onclick="sendEvent(6)">CATCH SUCCESS</button>
+		<button class="btn-fail" style="width:24%"  onclick="sendEvent(210)">SPIN FAIL</button>
+		<button class="btn-fail" style="width:24%"  onclick="sendEvent(117)">CATCH FAIL</button>
+		<button class="btn-fail" style="width:24%"  onclick="sendEvent(211)">BOX FULL</button>	
+		<button class="btn-fail" style="width:24%"  onclick="sendEvent(118)">BAG FULL</button>
+    </div>
+
+    <div id="log">Console ready...</div>
+
+<script>
+async function sendDebugBypass() {
+    if (!inboxChar) return;
+    try {
+        await sendChunk("DEBUG_BYPASS\n");
+        log("<span style='color:var(--neon-gold)'>Debug Bypass Activated!</span>");
+    } catch (e) { log("Error: " + e); }
+}
+
+function checkAgreement() {
+        const checkbox = document.getElementById('agree-check');
+        const button = document.getElementById('start-btn');
+        if (checkbox.checked) {
+            button.disabled = false;
+            button.style.opacity = "1";
+        } else {
+            button.disabled = true;
+            button.style.opacity = "0.5";
+        }
+    }
+
+    function hideDisclaimer() {
+        const overlay = document.getElementById('disclaimer-overlay');
+        overlay.style.display = 'none';
+    }
+    // --- UUIDS (Big-Endian Standard) ---
+    const SERVICE_UUID = "eb9a93b9-b582-4c5c-a363-cb676204c521";
+    const LED_CHAR_UUID = "ec9a93b9-b582-4c5c-a363-cb676204c521";
+    const BTN_CHAR_UUID = "ed9a93b9-b582-4c5c-a363-cb676204c521";
+
+    const CONSOLE_SVC_UUID = "550e8400-e29b-41d4-a716-446655440000";
+    const INBOX_CHAR_UUID  = "550e8400-e29b-41d4-a716-446655440001";
+
+    let ledChar, btnChar, inboxChar, device;
+    const encoder = new TextEncoder();
+    const PROV_PIN = "FAINTING2026"; 
+
+    function log(msg) {
+        const logDiv = document.getElementById('log');
+        if (logDiv) {
+            logDiv.innerHTML += msg + "<br>";
+            logDiv.scrollTop = logDiv.scrollHeight;
+        } else {
+            console.log(msg); 
+        }
+    }
+
+    // --- CONNECTION LOGIC ---
+    async function connect() {
+        try {
+            log("Searching...");
+            device = await navigator.bluetooth.requestDevice({
+                filters: [{ name: 'Pokemon GO Plus' }, { name: 'FaintingRoom Setup' }],
+                optionalServices: [SERVICE_UUID, CONSOLE_SVC_UUID]
+            });
+            const server = await device.gatt.connect();
+            
+            // Connect to standard Game Services
+            try {
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                ledChar = await service.getCharacteristic(LED_CHAR_UUID);
+                const btnChar = await service.getCharacteristic(BTN_CHAR_UUID);
+                await btnChar.startNotifications();
+                btnChar.addEventListener('characteristicvaluechanged', handleDeviceResponse);
+            } catch(e) { log("Standard services not found (Device likely unprovisioned)."); }
+
+            // Connect to App Console Service
+            try {
+                const consoleService = await server.getPrimaryService(CONSOLE_SVC_UUID);
+                inboxChar = await consoleService.getCharacteristic(INBOX_CHAR_UUID);
+                log("Console Inbox Linked.");
+            } catch(e) { log("App Console service not found."); }
+
+            document.getElementById('bt-label').innerText = "Connected: " + device.name;
+            document.getElementById('bt-label').style.color = "#39FF14";
+            log("CONNECTED.");
+        } catch (err) { log("Error: " + err); }
+    }
+
+    function onDisconnected() {
+        document.getElementById('bt-label').innerText = "Disconnected";
+        document.getElementById('bt-label').style.color = "#666";
+        log("<span style='color:var(--neon-red)'>Device disconnected.</span>");
+        inboxChar = null;
+        ledChar = null;
+        btnChar = null;
+    }
+
+    // --- SECURE CHUNKED TRANSMISSION ---
+    const sendChunk = async (text) => {
+        let encrypted = new Uint8Array(text.length);
+        for(let i = 0; i < text.length; i++) {
+            encrypted[i] = text.charCodeAt(i) ^ PROV_PIN.charCodeAt(i % PROV_PIN.length);
+        }
+        await inboxChar.writeValue(encrypted);
+        await new Promise(resolve => setTimeout(resolve, 100));
+    };
+
+    async function syncKeys() {
+        if (!inboxChar) { log("<span style='color:var(--neon-red)'>Connect to device first.</span>"); return; }
+        
+        const mac = document.getElementById('prov-mac').value.trim();
+        const key = document.getElementById('prov-key').value.trim();
+        const blob = document.getElementById('prov-blob').value.trim();
+        
+        if (mac.length !== 12 || key.length !== 32 || blob.length !== 512) {
+            log("<span style='color:var(--neon-red)'>Error: Check key lengths! MAC:12 KEY:32 BLOB:512</span>"); return;
+        }
+
+        try {
+            document.getElementById('bt-label').innerText = "SYNCING...";
+            document.getElementById('bt-label').style.color = "#FFD700";
+
+            await sendChunk("MAC:" + mac + "\n");
+            await sendChunk("KEY:" + key + "\n");
+            
+            for (let i = 0; i < 256; i += 50) {
+                let chunkLen = (i + 50 > 256) ? 256 - i : 50;
+                let hexChunk = blob.substring(i * 2, (i + chunkLen) * 2);
+                await sendChunk("BLOB:" + i + ":" + hexChunk + "\n");
+            }
+            
+            await sendChunk("COMMIT\n");
+
+            log("<span style='color:var(--neon-green)'>SYNC COMPLETE. Device Rebooting.</span>");
+            document.getElementById('bt-label').innerText = "Disconnected";
+            document.getElementById('bt-label').style.color = "#666";
+            
+        } catch(e) { log("<span style='color:var(--neon-red)'>Sync Error: " + e + "</span>"); }
+    }
+
+    async function sendAppNotification() {
+        const inputEl = document.getElementById('app-msg');
+        if (!inputEl) return; 
+        const msg = inputEl.value.trim();
+        if (!msg || !inboxChar) return;
+        try {
+            await sendChunk(msg + "\n");
+            log(`<span style='color:var(--neon-cyan)'>[BLE] Sent: ${msg}</span>`);
+            inputEl.value = ''; 
+        } catch (error) { log(`<span style='color:var(--neon-red)'>[BLE] Failed: ${error}</span>`); }
+    }
+	
+		async function factoryReset() {
+        if (!inboxChar) { 
+            log("<span style='color:var(--neon-red)'>Error: Connect to device first.</span>"); 
+            return; 
+        }
+        if(confirm("Are you sure? This will wipe the keys and reboot the device.")) {
+            try {
+                log("<span style='color:var(--neon-red)'>WIPING DEVICE...</span>");
+                await sendChunk("FACTORY_RESET\n");
+                document.getElementById('bt-label').innerText = "Disconnected";
+            } catch(e) {
+                log("<span style='color:var(--neon-red)'>Reset Error: " + e + "</span>");
+            }
+        }
+    }
+
+    function fillDummyData() {
+        const macEl = document.getElementById('prov-mac');
+        const keyEl = document.getElementById('prov-key');
+        const blobEl = document.getElementById('prov-blob');
+        
+        if (macEl) macEl.value = "AABBCCDDEEFF";
+        if (keyEl) keyEl.value = "00112233445566778899AABBCCDDEEFF";
+        if (blobEl) blobEl.value = "00".repeat(256);
+        log("<span style='color:var(--neon-purple)'>Dummy testing keys injected.</span>");
+    }
+    function handleDeviceResponse(event) {
+        const val = new Uint8Array(event.target.value.buffer);
+        if (val[0] === 3) {
+            const pulse = document.getElementById('response-pulse');
+            pulse.classList.add('pulse-active');
+            log("<span style='color:#07FF'>[DEVICE] BUTTON RESPONSE RECEIVED</span>");
+            setTimeout(() => pulse.classList.remove('pulse-active'), 400);
+
+            const mode = document.querySelector('input[name="auto-mode"]:checked').value;
+            if (mode !== "off") {
+                log("Auto-responding in 1s...");
+                setTimeout(() => {
+                    if (mode === "success") sendEvent(6); 
+                    else if (mode === "fail") sendEvent(117); 
+                }, 1000);
+            }
+            if (navigator.vibrate) navigator.vibrate(100);
+        }
+    }
+
+    async function sendEvent(id) {
+        if (!ledChar) return;
+        try {
+            let num_patterns = Math.ceil(id / 45) || 1;
+            let packet = [0x00, 0x00, 0x00, num_patterns];
+            let remaining = id;
+            for (let i = 0; i < num_patterns; i++) {
+                let current = Math.min(45, remaining);
+                let r = Math.min(15, current);
+                let g = Math.min(15, current - r);
+                let b = current - r - g;
+                packet.push(0x00, (g << 4) | r, b);
+                remaining -= current;
+            }
+            await ledChar.writeValue(new Uint8Array(packet));
+            log("Sent Event: " + id);
+        } catch (e) { log("Send Failed: " + e); }
+    }
+
+    // --- DIRECT BLE NOTIFICATIONS ---
+    async function sendAppNotification() {
+        const inputEl = document.getElementById('app-msg');
+        const msg = inputEl.value.trim();
+        
+        if (!msg) { log("<span style='color:var(--neon-red)'>Please type a message.</span>"); return; }
+        if (!inboxChar) { log("<span style='color:var(--neon-red)'>Not connected to Console Service.</span>"); return; }
+
+        try {
+            await inboxChar.writeValue(encoder.encode(msg));
+            log(`<span style='color:var(--neon-cyan)'>[BLE] Sent: ${msg}</span>`);
+            inputEl.value = ''; 
+        } catch (error) { log(`<span style='color:var(--neon-red)'>[BLE] Failed: ${error}</span>`); }
+    }
+
+    // --- PROVISIONING LOGIC ---
+    function fillDummyData() {
+        document.getElementById('prov-mac').value = "30AEA4800010";
+        document.getElementById('prov-key').value = "112233445566778899AABBCCDDEEFF00";
+        document.getElementById('prov-blob').value = "AA".repeat(256); // 512 chars of hex
+        log("Dummy data loaded. Ready to sync.");
+    }
+
+    // --- UTILS ---
+    function log(m) {
+        const el = document.getElementById('log');
+        el.innerHTML = "> " + m + "<br>" + el.innerHTML;
+    }
+    </script>
+</body>
+</html>
