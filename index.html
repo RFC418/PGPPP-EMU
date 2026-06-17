@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PGPPP: Main Menu</title>
+    <style>
+        :root { 
+            --neon-purple: #D08CF2; 
+            --neon-green: #39FF14; 
+            --neon-gold: #FFD700; 
+            --neon-cyan: #07FFF0;
+        }
+        body { 
+            background: #000; 
+            color: #fff; 
+            font-family: 'Segoe UI', sans-serif; 
+            text-align: center; 
+            padding: 50px 20px; 
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 { color: var(--neon-purple); letter-spacing: 2px; font-size: 2.5em; margin-bottom: 10px; }
+        p { color: #ccc; line-height: 1.6; margin-bottom: 40px; }
+        
+        .nav-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .nav-btn {
+            display: block;
+            background: #111;
+            color: #fff;
+            text-decoration: none;
+            border: 2px solid;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 1.2em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-flasher { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+        .btn-flasher:hover { background: var(--neon-cyan); color: #000; box-shadow: 0 0 15px var(--neon-cyan); }
+        
+        .btn-console { border-color: var(--neon-purple); color: var(--neon-purple); }
+        .btn-console:hover { background: var(--neon-purple); color: #000; box-shadow: 0 0 15px var(--neon-purple); }
+
+    </style>
+</head>
+<body>
+
+    <h1>PGPPP EMULATOR</h1>
+    <p>The ultimate hardware companion device. Select a tool below to configure or update your device.</p>
+
+    <div class="nav-container">
+        <a href="Console.html" class="nav-btn btn-console">
+            <strong>BLE Console</strong><br>
+            <span style="font-size: 0.7em; opacity: 0.8; text-transform: none;">Connect, Provision, and Manage Settings</span>
+        </a>
+
+        <a href="flasher.html" class="nav-btn btn-flasher">
+            <strong>Web Flasher</strong><br>
+            <span style="font-size: 0.7em; opacity: 0.8; text-transform: none;">Update Firmware via USB</span>
+        </a>
+    </div>
+
+</body>
+</html>
